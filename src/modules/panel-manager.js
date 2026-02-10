@@ -21,6 +21,7 @@ export const PanelManager = {
     panelOrder: [], // Track order for arrangement
     gap: 10,
     dragging: false,
+    _restoring: false,
 
     lastWidth: 0,
 
@@ -154,11 +155,11 @@ export const PanelManager = {
     // Schedule auto-arrange after DOM settles
     _arrangeScheduled: false,
     scheduleArrange() {
-        if (this._arrangeScheduled) return;
+        if (this._arrangeScheduled || this._restoring) return;
         this._arrangeScheduled = true;
         requestAnimationFrame(() => requestAnimationFrame(() => {
             this._arrangeScheduled = false;
-            if (this.dragging) return;
+            if (this.dragging || this._restoring) return;
             this.autoArrange();
             this.updateWorkspaceSize();
         }));
@@ -605,6 +606,7 @@ export const PanelManager = {
             this.createDefaultLayout();
             return;
         } else {
+            this._restoring = true;
             const hasPositions = layout.some(l => l.x != null && l.y != null);
             layout.forEach(l => {
                 const cfg = { ...l.config, id: l.id, w: l.w };
@@ -626,9 +628,13 @@ export const PanelManager = {
                 }
             });
             if (hasPositions && !this.isMobile()) {
-                setTimeout(() => this.updateWorkspaceSize(), 500);
+                setTimeout(() => {
+                    this._restoring = false;
+                    this.updateWorkspaceSize();
+                }, 500);
                 return;
             }
+            this._restoring = false;
         }
         // Auto-arrange after all panels are created and content loaded
         setTimeout(() => { this.autoArrange(); this.saveLayout(); }, 500);
