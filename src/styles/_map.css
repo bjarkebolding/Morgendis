@@ -1,0 +1,114 @@
+/* ============================================
+   MAP PANEL
+   ============================================ */
+#map {
+    flex: 1;
+    min-height: 200px;
+}
+
+.map-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--bg-control);
+    border-top: 1px solid var(--border);
+}
+
+.radar-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#timestamp {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    min-width: 80px;
+    text-align: center;
+}
+
+#frame-slider {
+    width: 70px;
+    accent-color: var(--accent);
+}
+
+.layer-toggles {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.layer-toggles label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.layer-toggles input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 11px;
+    height: 11px;
+}
+
+/* City markers on map */
+.city-marker-label {
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 3px 7px;
+    backdrop-filter: blur(8px);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    pointer-events: auto;
+    transition: background 0.2s;
+}
+.city-marker-label:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.city-marker-label .name {
+    font-weight: 600;
+    font-size: 0.65rem;
+    color: #e2e8f0;
+    letter-spacing: 0.02em;
+}
+
+.city-marker-label .weather-icon {
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+.city-marker-label .temp {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #6eb5ff;
+}
+
+.city-marker-label .wind {
+    font-size: 0.55rem;
+    color: #94a3b8;
+    opacity: 0.9;
+}
+
+.city-marker-label .sep {
+    width: 1px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.15);
+    flex-shrink: 0;
+}
+
+.leaflet-div-icon {
+    background: none !important;
+    border: none !important;
+    overflow: visible !important;
+    transform: translate(-50%, -50%);
+}

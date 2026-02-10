@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morgendis - En bedre vejrudsigt</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='16' cy='12' r='7' fill='%23f4a261' opacity='0.9'/%3E%3Cpath d='M4 20Q8 17 16 18Q24 19 28 17' stroke='%23e76f51' stroke-width='2' stroke-linecap='round' fill='none' opacity='0.7'/%3E%3Cpath d='M2 24Q10 20 16 22Q22 24 30 21' stroke='%23264653' stroke-width='2.5' stroke-linecap='round' fill='none' opacity='0.6'/%3E%3Cpath d='M4 28Q12 24 18 26Q24 28 28 25' stroke='%23999' stroke-width='2' stroke-linecap='round' fill='none' opacity='0.4'/%3E%3C/svg%3E">
+    <meta name="description" content="Morgendis tilbyder gratis vejrudsigt med detaljerede prognoser, radaranimation, temperatur, nedbør, vind og mange flere variabler. Flere prognosemodeller inkl. DMI, ECMWF og GFS.">
+    <meta name="keywords" content="vejrudsigt, vejr Danmark, dansk vejr, vejrprognose, radar Danmark, temperatur, nedbør, vind, DMI, ECMWF, GFS, vejrkort, morgendis">
+    <meta name="author" content="Bjarke Bolding">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://morgendis.dk/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Morgendis - En bedre vejrudsigt">
+    <meta property="og:description" content="Detaljeret dansk vejrudsigt med radar, temperatur, nedbør og vind.">
+    <meta property="og:url" content="https://morgendis.dk/">
+    <meta property="og:site_name" content="Morgendis">
+    <meta property="og:locale" content="da_DK">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Morgendis - En bedre vejrudsigt">
+    <meta name="twitter:description" content="Detaljeret dansk vejrudsigt med radar, temperatur, nedbør og vind.">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Morgendis",
+        "url": "https://morgendis.dk",
+        "description": "Gratis dansk vejrudsigt med detaljerede prognoser, radaranimation.",
+        "applicationCategory": "WeatherApplication",
+        "operatingSystem": "Web",
+        "author": {
+            "@type": "Person",
+            "name": "Bjarke Bolding"
+        },
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "DKK"
+        },
+        "inLanguage": "da"
+    }
+    </script>
+</head>
+<body data-time-theme="morning">
+    <div class="background-layer" id="bg-layer"></div>
+    <div class="background-overlay"></div>
+
+    <header class="header">
+        <div class="header-brand">
+            <svg class="brand-logo" viewBox="0 0 32 32" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="16" cy="12" r="7" fill="url(#logo-sun)" opacity="0.9"/>
+                <path d="M4 20 Q8 17, 16 18 Q24 19, 28 17" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.7"/>
+                <path d="M2 24 Q10 20, 16 22 Q22 24, 30 21" stroke="var(--accent-secondary)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.6"/>
+                <path d="M4 28 Q12 24, 18 26 Q24 28, 28 25" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.4"/>
+                <defs>
+                    <linearGradient id="logo-sun" x1="9" y1="5" x2="23" y2="19">
+                        <stop offset="0%" stop-color="var(--accent)"/>
+                        <stop offset="100%" stop-color="var(--accent-secondary)"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            <h1>Morgendis</h1>
+            <div class="time-greeting">
+                <span class="message" id="greeting-message">Velkommen!</span>
+            </div>
+        </div>
+
+        <div class="header-controls">
+            <div class="control-group days-toggle">
+                <button class="btn days-btn active" data-mode="48h">2 dage</button>
+                <button class="btn days-btn" data-mode="3-9d">3-9 dage</button>
+            </div>
+
+            <div class="control-group city-search-wrapper">
+                <label for="city-search">Tilføj:</label>
+                <input type="text" id="city-search" placeholder="Søg by..." aria-label="Søg efter by" autocomplete="off">
+                <div class="search-results" id="search-results"></div>
+            </div>
+
+            <button class="btn" id="add-map-btn" title="Tilføj radarkort" aria-label="Tilføj radarkort">+ Kort</button>
+            <button class="btn" id="add-moon-btn" title="Tilføj månepanel" aria-label="Tilføj månepanel">+ Måne</button>
+            <button class="btn-icon" id="reset-btn" title="Nulstil" aria-label="Nulstil alt">↻</button>
+        </div>
+    </header>
+
+    <div id="workspace"></div>
+
+    <footer class="footer">
+        <a href="https://buymeacoffee.com/bolding" target="_blank">☕ Buy Me a Coffee</a> |
+        Vejrdata: <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a> |
+        Radar: <a href="https://www.rainviewer.com/" target="_blank">RainViewer</a> |
+        Model: <select id="forecast-model" aria-label="Prognosemodel">
+            <option value="">Auto</option>
+            <optgroup label="Seamless">
+                <option value="icon_seamless">DWD ICON</option>
+                <option value="gfs_seamless">GFS</option>
+                <option value="meteofrance_seamless">Météo-France</option>
+                <option value="gem_seamless">GEM</option>
+                <option value="jma_seamless">JMA</option>
+                <option value="kma_seamless">KMA</option>
+                <option value="dmi_seamless">DMI</option>
+                <option value="knmi_seamless">KNMI</option>
+                <option value="ukmo_seamless">UKMO</option>
+            </optgroup>
+            <optgroup label="Europa">
+                <option value="ecmwf_ifs025">ECMWF IFS 0.25°</option>
+                <option value="ecmwf_ifs04">ECMWF IFS 0.4°</option>
+                <option value="ecmwf_aifs025">ECMWF AIFS (AI)</option>
+                <option value="dwd_icon_global">DWD ICON Global</option>
+                <option value="dwd_icon_eu">DWD ICON EU</option>
+                <option value="dwd_icon_d2">DWD ICON D2</option>
+                <option value="meteofrance_arpege_world">Arpège World</option>
+                <option value="meteofrance_arpege_europe">Arpège Europe</option>
+                <option value="knmi_harmonie_arome_europe">KNMI Harmonie EU</option>
+                <option value="dmi_harmonie_arome_europe">DMI Harmonie EU</option>
+            </optgroup>
+            <optgroup label="Nordamerika">
+                <option value="ncep_gfs_global">GFS Global</option>
+                <option value="gem_global">GEM Global</option>
+            </optgroup>
+            <optgroup label="Asien/Oceanien">
+                <option value="jma_gsm">JMA GSM</option>
+                <option value="kma_gdps">KMA GDPS</option>
+                <option value="cma_grapes_global">CMA GRAPES</option>
+                <option value="bom_access_global">BOM ACCESS</option>
+            </optgroup>
+        </select> |
+        <span id="last-update"></span>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

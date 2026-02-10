@@ -1,0 +1,107 @@
+/* ============================================
+   CITY CARD
+   ============================================ */
+.current-weather {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.weather-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.temp-display { text-align: center; margin-right: 14px; }
+
+.temp-value {
+    font-size: 1.8rem;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.feels-like {
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+}
+
+.weather-details {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px 12px;
+    font-size: 0.65rem;
+    padding-left: 10px;
+}
+
+.detail-item {
+    display: flex;
+    gap: 6px;
+}
+.detail-label {
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+.detail-value {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Variable selector */
+.variable-selector {
+    padding: 6px 10px;
+    background: var(--bg-control);
+    border-bottom: 1px solid var(--border);
+}
+
+.variable-selector summary {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.variable-selector summary:hover { color: var(--accent); }
+
+.variable-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.variable-group {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 6px;
+}
+
+.variable-group h4 {
+    font-size: 0.6rem;
+    color: var(--accent);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.variable-group label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.58rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 1px 0;
+}
+
+.variable-group label:hover { color: var(--text-primary); }
+
+.variable-group input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 10px;
+    height: 10px;
+}

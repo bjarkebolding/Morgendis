@@ -1,0 +1,166 @@
+/* ============================================
+   DETAILED FORECAST
+   ============================================ */
+.forecast-container {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+.forecast-wrapper {
+    min-width: 300px;
+    padding: 10px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.day-headers {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+    /* Align with chart plot area: 14px y-label + 30px y-axis on each side */
+    padding-left: 44px;
+    padding-right: 44px;
+}
+
+.day-header {
+    flex: 1;
+    text-align: left;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-left: 1px solid var(--border);
+}
+
+.day-header:first-child { border-left: none; }
+.day-header.today { color: var(--accent); }
+
+.weather-icons-row {
+    display: flex;
+    padding: 2px 0;
+    margin-bottom: 4px;
+    padding-left: 44px;
+    padding-right: 44px;
+}
+
+.weather-icon-cell {
+    flex: 1;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.chart-section {
+    position: relative;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.chart-section .y-label {
+    flex-shrink: 0;
+    width: 14px;
+    font-size: 0.5rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    text-align: center;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+}
+
+.chart-section .y-label-right {
+    flex-shrink: 0;
+    width: 14px;
+    font-size: 0.5rem;
+    color: var(--accent);
+    white-space: nowrap;
+    text-align: center;
+    writing-mode: vertical-rl;
+}
+
+.chart-canvas-wrapper {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+}
+
+.chart-canvas-wrapper canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.chart-container-temp .chart-canvas-wrapper { height: 100px; }
+.chart-container-precip .chart-canvas-wrapper { height: 60px; }
+.chart-container-wind .chart-canvas-wrapper { height: 80px; }
+.chart-container-pressure .chart-canvas-wrapper { height: 60px; }
+.chart-container-humidity .chart-canvas-wrapper { height: 60px; }
+.chart-container-clouds .chart-canvas-wrapper { height: 60px; }
+.chart-container-solar .chart-canvas-wrapper { height: 60px; }
+
+.wind-arrows-row {
+    display: flex;
+    padding: 2px 0;
+    padding-left: 44px;
+    padding-right: 44px;
+}
+
+.wind-arrow-cell {
+    flex: 1;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.hour-labels {
+    display: flex;
+    padding-left: 44px;
+    padding-right: 44px;
+    border-top: 1px solid var(--border);
+    padding-top: 2px;
+}
+
+.hour-label {
+    flex: 1;
+    text-align: center;
+    font-size: 0.55rem;
+    color: var(--text-secondary);
+}
+
+/* Loading & Error */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100px;
+    color: var(--text-secondary);
+    gap: 8px;
+    font-size: 0.75rem;
+}
+
+.loading-indicator::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-message {
+    text-align: center;
+    padding: 15px;
+    color: #ef4444;
+    font-size: 0.75rem;
+}
+.retry-btn {
+    margin-left: 8px;
+    color: var(--text-primary);
+    border-color: var(--border);
+}

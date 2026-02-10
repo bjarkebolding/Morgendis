@@ -1,0 +1,148 @@
+/* ============================================
+   WORKSPACE - DRAGGABLE PANELS
+   ============================================ */
+#workspace {
+    position: relative;
+    flex: 1;
+    padding: 10px;
+}
+
+.panel {
+    position: absolute;
+    background: var(--bg-card);
+    border-radius: 8px;
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-width: 280px;
+    box-shadow: 0 2px 10px var(--shadow);
+    transition: left 0.25s ease, top 0.25s ease, box-shadow 0.2s;
+}
+
+.panel:hover {
+    box-shadow: 0 4px 20px var(--shadow);
+}
+
+.panel.dragging {
+    opacity: 0.9;
+    z-index: 999 !important;
+    cursor: grabbing;
+    box-shadow: 0 8px 30px var(--shadow);
+    transition: box-shadow 0.2s;
+}
+
+.panel.minimized .panel-content,
+.panel.minimized .resize-handle {
+    display: none;
+}
+
+.panel.minimized {
+    min-height: auto;
+    height: auto !important;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+}
+.panel.minimized:hover {
+    opacity: 1;
+}
+.panel.minimized .panel-header {
+    border-bottom: none;
+    border-radius: 8px;
+}
+.minimized-vars {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    margin-left: 6px;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--bg-control);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+    gap: 8px;
+    cursor: grab;
+}
+
+.panel-header h3 {
+    font-size: 0.8rem;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.panel-header .coords {
+    font-size: 0.55rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+}
+
+.panel-buttons {
+    display: flex;
+    gap: 2px;
+}
+
+.panel-content {
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-map .panel-content {
+    flex: 1;
+    min-height: 200px;
+}
+
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    opacity: 0.4;
+    z-index: 10;
+}
+
+.resize-handle::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    right: 3px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
+}
+
+.resize-handle:hover { opacity: 0.8; }
+
+/* City panels: width-only resize handle on right edge */
+.panel:not(.panel-map) .resize-handle {
+    cursor: ew-resize;
+    width: 8px;
+    height: 100%;
+    top: 0;
+    bottom: auto;
+}
+
+.panel:not(.panel-map) .resize-handle::after {
+    bottom: auto;
+    top: 50%;
+    right: 1px;
+    width: 3px;
+    height: 20px;
+    transform: translateY(-50%);
+    border: none;
+    border-right: 2px solid var(--accent);
+}
