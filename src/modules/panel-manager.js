@@ -22,6 +22,7 @@ export const PanelManager = {
     gap: 10,
     dragging: false,
     _restoring: false,
+    _manualPositions: false,
 
     lastWidth: 0,
 
@@ -86,6 +87,7 @@ export const PanelManager = {
         } else {
             this.panelOrder.push(id);
         }
+        if (!this._restoring) this._manualPositions = false;
 
         if (!mobile) {
             this.setupDrag(id, panel);
@@ -96,7 +98,11 @@ export const PanelManager = {
                 const h = panel.offsetHeight;
                 if (h !== lastH) {
                     lastH = h;
-                    this.scheduleArrange();
+                    if (this._manualPositions) {
+                        this.updateWorkspaceSize();
+                    } else {
+                        this.scheduleArrange();
+                    }
                 }
             });
             heightObserver.observe(panel);
@@ -154,6 +160,7 @@ export const PanelManager = {
 
     // Schedule auto-arrange after DOM settles
     _arrangeScheduled: false,
+    _saveTimeout: null,
     scheduleArrange() {
         if (this._arrangeScheduled || this._restoring) return;
         this._arrangeScheduled = true;
@@ -162,6 +169,9 @@ export const PanelManager = {
             if (this.dragging || this._restoring) return;
             this.autoArrange();
             this.updateWorkspaceSize();
+            // Debounce save — wait for layout to fully settle
+            clearTimeout(this._saveTimeout);
+            this._saveTimeout = setTimeout(() => this.saveLayout(), 1000);
         }));
     },
 
@@ -608,13 +618,15 @@ export const PanelManager = {
         } else {
             this._restoring = true;
             const hasPositions = layout.some(l => l.x != null && l.y != null);
+            if (hasPositions) this._manualPositions = true;
             layout.forEach(l => {
                 const cfg = { ...l.config, id: l.id, w: l.w };
                 if (l.h) cfg.h = l.h;
+                delete cfg.prepend; // Don't prepend during restore — order comes from saved layout
                 const factory = _panelFactories.get(l.type);
                 if (factory) factory(l, cfg);
-                // Restore saved position
-                const panelId = this.panelOrder[this.panelOrder.length - 1];
+                // Restore saved position using the saved ID directly
+                const panelId = l.id;
                 if (panelId && l.x != null && l.y != null) {
                     const el = this.panels.get(panelId)?.element;
                     if (el) {

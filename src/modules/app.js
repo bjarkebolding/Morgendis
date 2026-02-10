@@ -121,12 +121,10 @@ export const App = {
         document.getElementById('add-map-btn').addEventListener('click', () => {
             MapModule.createMapPanel({ prepend: true })
             PanelManager.scheduleArrange()
-            PanelManager.saveLayout()
         })
         document.getElementById('add-moon-btn').addEventListener('click', () => {
             MoonModule.createMoonPanel({ prepend: true })
             PanelManager.scheduleArrange()
-            PanelManager.saveLayout()
         })
         document.getElementById('reset-btn').addEventListener('click', () => {
             if (confirm('Nulstil alt?')) { localStorage.clear(); location.reload() }

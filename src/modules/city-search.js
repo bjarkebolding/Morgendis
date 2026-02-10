@@ -43,7 +43,6 @@ export const CitySearch = {
         document.getElementById('city-search').value = '';
         container.classList.remove('active');
         PanelManager.scheduleArrange();
-        PanelManager.saveLayout();
     },
 
     renderResults(cities, container) {
