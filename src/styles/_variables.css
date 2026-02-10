@@ -16,6 +16,7 @@
     --glass: rgba(255, 255, 255, 0.05);
     --bg-overlay: linear-gradient(135deg, rgba(26, 26, 46, 0.85) 0%, rgba(22, 33, 62, 0.9) 100%);
     --grid-size: 20px;
+    --divider-width: 6px;
 }
 
 [data-time-theme="night"] {

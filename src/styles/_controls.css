@@ -104,6 +104,7 @@ input[type="number"] { width: 50px; }
 .btn-icon:active { color: var(--accent); }
 .btn-icon.danger:active { color: #ef4444; }
 .mobile-only { display: none; }
+.desktop-only { }
 
 .days-toggle { gap: 0 !important; }
 .days-btn {

@@ -5,6 +5,15 @@
     .mobile-only {
         display: flex !important;
     }
+    body {
+        height: auto;
+        overflow: auto;
+    }
+    #workspace {
+        height: auto;
+        overflow: visible;
+        padding: 5px;
+    }
     .panel {
         position: static !important;
         width: 100% !important;
@@ -12,6 +21,8 @@
         left: auto !important;
         top: auto !important;
         margin-bottom: 8px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
     }
     .panel-map {
         height: 400px !important;
@@ -19,8 +30,21 @@
     .panel-header {
         cursor: default;
     }
-    .resize-handle {
+    .tile-divider {
         display: none;
+    }
+    .tile-empty-space {
+        display: none;
+    }
+    .tile-split {
+        display: block !important;
+    }
+    .tile-split > * {
+        width: 100% !important;
+        flex: none !important;
+    }
+    .desktop-only {
+        display: none !important;
     }
 }
 
@@ -28,6 +52,10 @@
    RESPONSIVE - SMALL SCREENS
    ============================================ */
 @media (max-width: 768px) {
+    body {
+        height: auto;
+        overflow: auto;
+    }
     .header { padding: 6px 10px; }
     .header-brand h1 { font-size: 1rem; }
     .header-controls { gap: 6px; width: 100%; justify-content: space-between; }
@@ -41,6 +69,8 @@
     .city-search-wrapper input { width: 100% !important; }
 
     #workspace {
+        height: auto;
+        overflow: visible;
         padding: 5px;
     }
     .panel {
@@ -50,6 +80,8 @@
         left: auto !important;
         top: auto !important;
         margin-bottom: 8px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
     }
     .panel-map {
         height: 400px !important;
@@ -57,8 +89,21 @@
     .panel-header {
         cursor: default;
     }
-    .resize-handle {
+    .tile-divider {
         display: none;
+    }
+    .tile-empty-space {
+        display: none;
+    }
+    .tile-split {
+        display: block !important;
+    }
+    .tile-split > * {
+        width: 100% !important;
+        flex: none !important;
+    }
+    .desktop-only {
+        display: none !important;
     }
 
     /* Compact chart labels on mobile */

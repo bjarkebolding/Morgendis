@@ -133,8 +133,7 @@ export const CityCards = {
             this.renderDetailedForecast(panelId, city, data);
             MapModule.updateCityMarkerWeather(city.id, data);
             document.getElementById('last-update').textContent = `Opdateret: ${formatTime(new Date())}`;
-            PanelManager.updateWorkspaceSize();
-        } catch (e) {
+                    } catch (e) {
             console.error(`Error for ${city.name}:`, e);
             const currentEl = document.getElementById(`current-${panelId}`);
             const forecastEl = document.getElementById(`forecast-${panelId}`);
@@ -368,8 +367,7 @@ export const CityCards = {
         // Use double-rAF to ensure DOM has fully laid out before measuring
         requestAnimationFrame(() => requestAnimationFrame(() => {
             buildCharts();
-            PanelManager.updateWorkspaceSize();
-        }));
+                    }));
     },
 
     createChart(panelId, groupKey, varIds, hourly, times, days, allVars, options = {}) {

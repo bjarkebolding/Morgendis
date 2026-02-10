@@ -32,8 +32,14 @@ export const MoonModule = {
         const cx = size / 2, cy = size / 2
         const angle = fraction * 2 * Math.PI
         const limbX = Math.cos(angle) * r
-        const sweep1 = fraction <= 0.5 ? 1 : 0
-        const sweep2 = fraction <= 0.5 ? 0 : 1
+        // sweep1: which side of the circle the shadow occupies (0=left/waxing, 1=right/waning)
+        const sweep1 = fraction <= 0.5 ? 0 : 1
+        // sweep2: terminator arc direction (bottom→top: sweep=0 goes RIGHT, sweep=1 goes LEFT)
+        // limbX > 0 (fraction 0-0.25, 0.75-1): big shadow, terminator opposite side from circle
+        // limbX < 0 (fraction 0.25-0.75): small shadow, terminator same side as circle
+        const sweep2 = ((fraction > 0.5) === (limbX >= 0)) ? 1 : 0
+        const ext = 6 // overshoot for clip-path coverage
+        const termR = Math.abs(limbX) + 1 // +1 for blur bleed, minimal distortion
         return `<svg class="moon-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
             <defs>
                 <radialGradient id="moonLit" cx="40%" cy="35%" r="60%">
@@ -46,7 +52,7 @@ export const MoonModule = {
             </defs>
             <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#moonLit)" stroke="#b8a94e" stroke-width="1"/>
             <g clip-path="url(#moonClip)">
-                <path d="M ${cx} ${cy - r - 10} A ${r + 10} ${r + 10} 0 0 ${sweep1} ${cx} ${cy + r + 10} A ${Math.abs(limbX) + 4} ${r + 10} 0 0 ${sweep2} ${cx} ${cy - r - 10} Z" fill="#1a1a2e" filter="url(#shadowBlur)"/>
+                <path d="M ${cx} ${cy - r - ext} A ${r + ext} ${r + ext} 0 0 ${sweep1} ${cx} ${cy + r + ext} A ${termR} ${r + ext} 0 0 ${sweep2} ${cx} ${cy - r - ext} Z" fill="#1a1a2e" filter="url(#shadowBlur)"/>
             </g>
         </svg>`
     },
@@ -65,8 +71,7 @@ export const MoonModule = {
         const phaseTargets = [
             { fraction: 0, name: 'Nymåne', icon: '\u{1F311}' },
             { fraction: 0.25, name: 'Første kvarter', icon: '\u{1F313}' },
-            { fraction: 0.5, name: 'Fuldmåne', icon: '\u{1F315}' },
-            { fraction: 0.75, name: 'Sidste kvarter', icon: '\u{1F317}' }
+            { fraction: 0.5, name: 'Fuldmåne', icon: '\u{1F315}' }
         ]
         for (const t of phaseTargets) {
             events.push({ date: this.findNextPhase(t.fraction, from), name: t.name, icon: t.icon })
@@ -182,7 +187,7 @@ export const MoonModule = {
         const canvasId = `moon-distance-chart-${id}`
 
         const eventsHtml = events.map(e =>
-            `<div class="moon-event-item">
+            `<div class="moon-event-card">
                 <span class="event-icon">${e.icon}</span>
                 <span class="event-name">${e.name}</span>
                 <span class="event-date">${formatDate(e.date)}</span>
@@ -191,16 +196,18 @@ export const MoonModule = {
 
         content.innerHTML = `
             <div class="moon-display">
-                ${this.renderMoonSVG(phase.fraction)}
-                <div class="moon-info">
-                    <div class="moon-phase-name">${phase.icon} ${phase.name}</div>
-                    <div class="moon-illumination">${phase.illumination}% belyst</div>
-                    <div class="moon-distance">Afstand: ${formatDist(Math.round(distance))} km</div>
+                <div class="moon-top">
+                    ${this.renderMoonSVG(phase.fraction, 100)}
+                    <div class="moon-info">
+                        <div class="moon-phase-name">${phase.name}</div>
+                        <div class="moon-detail">${phase.illumination}% belyst</div>
+                        <div class="moon-detail">Afstand: ${formatDist(Math.round(distance))} km</div>
+                    </div>
                 </div>
+                <div class="moon-events">${eventsHtml}</div>
                 <div class="moon-chart-wrapper">
                     <canvas id="${canvasId}"></canvas>
                 </div>
-                <div class="moon-events">${eventsHtml}</div>
             </div>
         `
 

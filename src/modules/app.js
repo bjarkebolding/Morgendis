@@ -1,7 +1,7 @@
 import { storage } from '../utils/storage.js'
 import { defaultCities } from '../config/cities.js'
 import { TimeTheme, setMapModule } from './time-theme.js'
-import { PanelManager, registerCloseHandler, registerSummaryHandler, registerResizeHandler, registerPanelFactory, registerDefaultLayoutFactory } from './panel-manager.js'
+import { PanelManager, registerCloseHandler, registerResizeHandler, registerPanelFactory, registerDefaultLayoutFactory } from './panel-manager.js'
 import { CityCards } from './city-cards.js'
 import { CitySearch } from './city-search.js'
 import { MapModule, setMapCityCards } from './map-module.js'
@@ -19,24 +19,12 @@ export const App = {
         registerCloseHandler('map', (id) => MapModule.removeMap(id))
         registerCloseHandler('moon', () => MoonModule.destroyChart())
 
-        // Register panel minimize summary handlers
-        registerSummaryHandler('city', (id, p) => {
-            const summary = CityCards.getCurrentValuesSummary(id)
-            return `${p.config.city?.name || 'Panel'} <span class="minimized-vars">${summary}</span>`
-        })
-        registerSummaryHandler('map', () => 'Radarkort')
-        registerSummaryHandler('moon', () => {
-            const phase = MoonModule.getPhase()
-            return `Måne <span class="minimized-vars">${phase.icon} ${phase.illumination}%</span>`
-        })
-
         // Register resize handlers
         registerResizeHandler(() => MapModule.invalidateAllMaps())
         registerResizeHandler(() => CityCards.reRenderAll())
 
         // Register panel factories for layout restore
         registerPanelFactory('map', (l, cfg) => {
-            cfg.h = cfg.h || 400
             MapModule.createMapPanel(cfg)
         })
         registerPanelFactory('city', (l, cfg) => {
@@ -46,42 +34,48 @@ export const App = {
             MoonModule.createMoonPanel(cfg)
         })
 
-        // Register default layout factory
+        // Register default layout factory — builds tileTree directly
         registerDefaultLayoutFactory((pm) => {
-            const ws = document.getElementById('workspace')
-            const wsW = ws.clientWidth
-            const gap = pm.gap
             const mobile = pm.isMobile()
 
             if (mobile) {
-                const panelW = wsW - gap * 2
-                MapModule.createMapPanel({ w: panelW, h: 400 })
-                defaultCities.forEach(city => CityCards.createCityPanel(city, { w: panelW }))
+                MapModule.createMapPanel({})
+                defaultCities.forEach(city => CityCards.createCityPanel(city, {}))
                 return
             }
 
-            const cityW = Math.min(600, Math.floor((wsW - gap * 3) * 0.55))
-            const mapW = wsW - cityW - gap * 3
-            const mapH = 500
+            // Build a horizontal split: cities left (55%), map right (45%)
+            // createCityPanel and createMapPanel return string IDs
+            const cityIds = []
+            defaultCities.forEach(city => {
+                const panelId = CityCards.createCityPanel(city, {})
+                cityIds.push(panelId)
+            })
+            const mapId = MapModule.createMapPanel({})
 
-            defaultCities.forEach(city => CityCards.createCityPanel(city, { w: cityW }))
-            MapModule.createMapPanel({ w: mapW, h: mapH })
+            // Build the tile tree: one row with cities stacked vertically on left, map on right
+            const citySize = 1 / cityIds.length
+            const cityChildren = cityIds.map(id => ({ type: 'leaf', panelId: id, size: citySize }))
+            const leftSplit = cityIds.length > 1
+                ? { type: 'split', direction: 'vertical', children: cityChildren, size: 0.55 }
+                : { type: 'leaf', panelId: cityIds[0], size: 0.55 }
+            const rightLeaf = { type: 'leaf', panelId: mapId, size: 0.45 }
+
+            // Vertical root wrapping a single horizontal row
+            pm.tileTree = {
+                type: 'split',
+                direction: 'vertical',
+                children: [{
+                    type: 'split',
+                    direction: 'horizontal',
+                    children: [leftSplit, rightLeaf],
+                    size: 1
+                }],
+                size: 1
+            }
 
             setTimeout(() => {
-                let curY = gap
-                pm.panelOrder.forEach(id => {
-                    const p = pm.panels.get(id)
-                    if (!p) return
-                    if (p.type === 'city') {
-                        p.element.style.left = gap + 'px'
-                        p.element.style.top = curY + 'px'
-                        curY += p.element.offsetHeight + gap
-                    } else if (p.type === 'map') {
-                        p.element.style.left = (cityW + gap * 2) + 'px'
-                        p.element.style.top = gap + 'px'
-                    }
-                })
-                pm.updateWorkspaceSize()
+                pm.applyLayout()
                 pm.saveLayout()
             }, 500)
         })
