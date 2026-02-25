@@ -43,10 +43,11 @@
     gap: 6px;
 }
 
+
 .tile-h {
     display: flex;
     flex-direction: row;
-    align-items: stretch;
+    align-items: flex-start;
     gap: 6px;
 }
 
@@ -93,7 +94,6 @@
 .panel-content {
     display: flex;
     flex-direction: column;
-    flex: 1;
 }
 
 .panel-map {
@@ -127,15 +127,6 @@
     opacity: 0.4;
 }
 
-/* ── Empty space placeholder ──────────────── */
-
-.tile-empty-space {
-    border: 2px dashed var(--border);
-    border-radius: 6px;
-    opacity: 0.4;
-    min-height: 60px;
-    box-sizing: border-box;
-}
 
 /* ── Drop indicator ────────────────────────── */
 
@@ -147,6 +138,27 @@
     pointer-events: none;
     display: none;
     border-radius: 2px;
+}
+
+/* ── Blank-space drop zone ─────────────────── */
+
+.tile-drop-zone {
+    display: none;
+    min-height: 80px;
+    border-radius: 6px;
+    border: 2px dashed var(--border);
+    opacity: 0.5;
+    transition: border-color 0.1s, opacity 0.1s;
+    box-sizing: border-box;
+}
+
+#workspace[data-dragging] .tile-drop-zone {
+    display: block;
+}
+
+.tile-drop-zone.drop-hover {
+    border-color: var(--accent);
+    opacity: 0.85;
 }
 
 /* ── Drag ghost ────────────────────────────── */

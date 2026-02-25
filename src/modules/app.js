@@ -40,26 +40,37 @@ export const App = {
 
             if (mobile) {
                 MapModule.createMapPanel({})
+                MoonModule.createMoonPanel({})
                 defaultCities.forEach(city => CityCards.createCityPanel(city, {}))
                 return
             }
 
-            // Build a horizontal split: cities left (55%), map right (45%)
-            // createCityPanel and createMapPanel return string IDs
+            // Build panels
             const cityIds = []
             defaultCities.forEach(city => {
                 const panelId = CityCards.createCityPanel(city, {})
                 cityIds.push(panelId)
             })
             const mapId = MapModule.createMapPanel({})
+            const moonId = MoonModule.createMoonPanel({})
 
-            // Build the tile tree: one row with cities stacked vertically on left, map on right
+            // Left column: cities stacked vertically (55%)
             const citySize = 1 / cityIds.length
             const cityChildren = cityIds.map(id => ({ type: 'leaf', panelId: id, size: citySize }))
             const leftSplit = cityIds.length > 1
                 ? { type: 'split', direction: 'vertical', children: cityChildren, size: 0.55 }
                 : { type: 'leaf', panelId: cityIds[0], size: 0.55 }
-            const rightLeaf = { type: 'leaf', panelId: mapId, size: 0.45 }
+
+            // Right column: map (60%) + moon (40%) stacked vertically (45%)
+            const rightSplit = {
+                type: 'split',
+                direction: 'vertical',
+                children: [
+                    { type: 'leaf', panelId: mapId, size: 0.6 },
+                    { type: 'leaf', panelId: moonId, size: 0.4 }
+                ],
+                size: 0.45
+            }
 
             // Vertical root wrapping a single horizontal row
             pm.tileTree = {
@@ -68,7 +79,7 @@ export const App = {
                 children: [{
                     type: 'split',
                     direction: 'horizontal',
-                    children: [leftSplit, rightLeaf],
+                    children: [leftSplit, rightSplit],
                     size: 1
                 }],
                 size: 1

@@ -99,16 +99,6 @@ function findParentOfNode(root, target) {
 }
 
 const MIN_PANEL_PX = 100;
-const SNAP_SIZES = [1/3, 1/2, 2/3, 1];
-
-function snapSize(val) {
-    let best = SNAP_SIZES[0], bestDist = Math.abs(val - best);
-    for (const s of SNAP_SIZES) {
-        const d = Math.abs(val - s);
-        if (d < bestDist) { best = s; bestDist = d; }
-    }
-    return best;
-}
 
 
 export const PanelManager = {
@@ -119,6 +109,7 @@ export const PanelManager = {
     _restoring: false,
     _dividers: [],
     _dropIndicator: null,
+    _dropZoneEl: null,
     _ghostEl: null,
     _dividerDragging: false,
 
@@ -141,23 +132,83 @@ export const PanelManager = {
 
     // ── Tree manipulation ─────────────────────────────────────
 
+    // Find the leaf node whose panel occupies the largest screen area
+    _findLargestLeaf(excludeId) {
+        if (!this.tileTree) return null;
+        let bestNode = null;
+        let bestArea = -1;
+        const traverse = (node) => {
+            if (node.type === 'leaf') {
+                if (node.panelId === excludeId) return;
+                const panel = this.panels.get(node.panelId);
+                if (!panel) return;
+                const rect = panel.element.getBoundingClientRect();
+                const area = rect.width * rect.height;
+                if (area > bestArea) { bestArea = area; bestNode = node; }
+            } else if (node.children) {
+                node.children.forEach(traverse);
+            }
+        };
+        traverse(this.tileTree);
+        return bestNode;
+    },
+
     addPanelToTree(id) {
-        const leaf = makeLeaf(id, 1);
         if (!this.tileTree) {
-            this.tileTree = makeSplit('vertical', [leaf], 1);
+            this.tileTree = makeSplit('vertical', [makeLeaf(id, 1)], 1);
             return;
         }
-        if (this.tileTree.type === 'leaf') {
-            this.tileTree = makeSplit('vertical', [
-                makeLeaf(this.tileTree.panelId, 0.5),
-                makeLeaf(id, 0.5)
-            ], 1);
+
+        // Find the largest existing panel and split it along its longer axis
+        const target = this._findLargestLeaf(id);
+        if (!target) {
+            // Fallback: append to root
+            if (this.tileTree.type === 'leaf') {
+                this.tileTree = makeSplit('vertical', [makeLeaf(this.tileTree.panelId, 0.5), makeLeaf(id, 0.5)], 1);
+            } else {
+                const n = this.tileTree.children.length + 1;
+                this.tileTree.children.forEach(c => c.size = (c.size * (n - 1)) / n);
+                this.tileTree.children.push(makeLeaf(id, 1 / n));
+            }
             return;
         }
-        const n = this.tileTree.children.length + 1;
-        this.tileTree.children.forEach(c => c.size = (c.size * (n - 1)) / n);
-        leaf.size = 1 / n;
-        this.tileTree.children.push(leaf);
+
+        // Determine split direction from the target panel's dimensions
+        const panel = this.panels.get(target.panelId);
+        let direction = 'horizontal';
+        if (panel) {
+            const rect = panel.element.getBoundingClientRect();
+            if (rect.width > 0 || rect.height > 0) {
+                direction = rect.width >= rect.height ? 'horizontal' : 'vertical';
+            }
+        }
+
+        // Root is itself the target leaf
+        if (this.tileTree === target) {
+            this.tileTree = makeSplit(direction, [makeLeaf(target.panelId, 0.5), makeLeaf(id, 0.5)], 1);
+            return;
+        }
+
+        const found = findDirectParent(this.tileTree, target.panelId);
+        if (!found) { this.tileTree.children.push(makeLeaf(id, 0.5)); return; }
+
+        const { parent, index } = found;
+        const targetChild = parent.children[index];
+
+        if (parent.direction === direction) {
+            // Same direction: insert as sibling after target, each half the target's space
+            const half = targetChild.size * 0.5;
+            targetChild.size = half;
+            parent.children.splice(index + 1, 0, makeLeaf(id, half));
+            const total = parent.children.reduce((s, c) => s + c.size, 0);
+            if (total > 0) parent.children.forEach(c => c.size /= total);
+        } else {
+            // Different direction: wrap target in a new sub-split
+            parent.children[index] = makeSplit(direction,
+                [makeLeaf(target.panelId, 0.5), makeLeaf(id, 0.5)],
+                targetChild.size
+            );
+        }
     },
 
     removeFromTree(id) {
@@ -203,6 +254,13 @@ export const PanelManager = {
         const rootEl = this._buildNode(this.tileTree);
         if (rootEl) ws.appendChild(rootEl);
 
+        // Drop zone — always last child so it flows below all content
+        if (!this._dropZoneEl) {
+            this._dropZoneEl = document.createElement('div');
+            this._dropZoneEl.className = 'tile-drop-zone';
+        }
+        ws.appendChild(this._dropZoneEl);
+
         // Render dividers after layout settles
         requestAnimationFrame(() => this.renderDividers());
     },
@@ -226,27 +284,14 @@ export const PanelManager = {
             const childEl = this._buildNode(child);
             if (!childEl) return;
             if (node.direction === 'horizontal') {
-                const pct = (snapSize(child.size) * 100) + '%';
+                const pct = (child.size * 100) + '%';
                 childEl.style.flex = '0 0 ' + pct;
                 childEl.style.width = pct;
                 childEl.style.maxWidth = pct;
             }
+            // vertical: no height constraints — panels grow naturally, page scrolls
             wrapper.appendChild(childEl);
         });
-
-        // Add empty-space placeholder if horizontal split has unused space
-        if (node.direction === 'horizontal') {
-            const totalUsed = node.children.reduce((s, c) => s + snapSize(c.size), 0);
-            if (totalUsed < 1 - 0.01 && node.children.length < 3) {
-                const placeholder = document.createElement('div');
-                placeholder.className = 'tile-empty-space';
-                placeholder._tileNode = node;
-                const pct = ((1 - totalUsed) * 100) + '%';
-                placeholder.style.flex = '0 0 ' + pct;
-                placeholder.style.width = pct;
-                wrapper.appendChild(placeholder);
-            }
-        }
 
         return wrapper;
     },
@@ -340,15 +385,16 @@ export const PanelManager = {
             return 'center';
         };
 
+        const ws = document.getElementById('workspace');
+
         const showDropIndicator = (targetPanel, zone) => {
             if (!this._dropIndicator) {
                 this._dropIndicator = document.createElement('div');
                 this._dropIndicator.className = 'tile-drop-indicator';
-                document.getElementById('workspace').appendChild(this._dropIndicator);
+                ws.appendChild(this._dropIndicator);
             }
             const ind = this._dropIndicator;
             const rect = targetPanel.getBoundingClientRect();
-            const ws = document.getElementById('workspace');
             const wsRect = ws.getBoundingClientRect();
             const ox = rect.left - wsRect.left + ws.scrollLeft;
             const oy = rect.top - wsRect.top + ws.scrollTop;
@@ -375,25 +421,6 @@ export const PanelManager = {
                     ind.style.width = rect.width + 'px'; ind.style.height = rect.height + 'px';
                     break;
             }
-        };
-
-        const showEmptySpaceIndicator = (emptySpaceEl) => {
-            if (!this._dropIndicator) {
-                this._dropIndicator = document.createElement('div');
-                this._dropIndicator.className = 'tile-drop-indicator';
-                document.getElementById('workspace').appendChild(this._dropIndicator);
-            }
-            const ind = this._dropIndicator;
-            const rect = emptySpaceEl.getBoundingClientRect();
-            const ws = document.getElementById('workspace');
-            const wsRect = ws.getBoundingClientRect();
-            const ox = rect.left - wsRect.left + ws.scrollLeft;
-            const oy = rect.top - wsRect.top + ws.scrollTop;
-            ind.style.display = 'block';
-            ind.style.left = ox + 'px';
-            ind.style.top = oy + 'px';
-            ind.style.width = rect.width + 'px';
-            ind.style.height = rect.height + 'px';
         };
 
         const hideDropIndicator = () => {
@@ -430,33 +457,24 @@ export const PanelManager = {
             this._dividers.forEach(d => d.style.pointerEvents = '');
 
             const targetPanel = elUnder?.closest('.panel');
-            const emptySpace = elUnder?.closest('.tile-empty-space');
+            const targetDropZone = elUnder?.closest('.tile-drop-zone');
 
-            if (emptySpace && emptySpace._tileNode) {
-                const splitNode = emptySpace._tileNode;
-                const sourceInSplit = splitNode.children.some(c => c.type === 'leaf' && c.panelId === id);
-                if (!sourceInSplit && splitNode.children.length < 3) {
-                    showEmptySpaceIndicator(emptySpace);
-                    dragStart.targetId = null;
-                    dragStart.zone = 'empty-space';
-                    dragStart.emptySpaceNode = splitNode;
-                } else {
-                    hideDropIndicator();
-                    dragStart.targetId = null;
-                    dragStart.zone = null;
-                    dragStart.emptySpaceNode = null;
-                }
-            } else if (targetPanel && targetPanel.id !== id) {
+            if (targetPanel && targetPanel.id !== id) {
+                this._dropZoneEl?.classList.remove('drop-hover');
                 const zone = getDropZone(targetPanel, clientX, clientY);
                 showDropIndicator(targetPanel, zone);
                 dragStart.targetId = targetPanel.id;
                 dragStart.zone = zone;
-                dragStart.emptySpaceNode = null;
+            } else if (targetDropZone) {
+                hideDropIndicator();
+                this._dropZoneEl?.classList.add('drop-hover');
+                dragStart.targetId = null;
+                dragStart.zone = 'workspace';
             } else {
                 hideDropIndicator();
+                this._dropZoneEl?.classList.remove('drop-hover');
                 dragStart.targetId = null;
                 dragStart.zone = null;
-                dragStart.emptySpaceNode = null;
             }
         };
 
@@ -470,9 +488,11 @@ export const PanelManager = {
 
             hideDropIndicator();
             removeGhost();
+            this._dropZoneEl?.classList.remove('drop-hover');
+            ws.removeAttribute('data-dragging');
 
-            if (dragMoved && dragStart.zone === 'empty-space' && dragStart.emptySpaceNode) {
-                this.tileDropEmptySpace(id, dragStart.emptySpaceNode);
+            if (dragMoved && dragStart.zone === 'workspace') {
+                this.tileDropToWorkspace(id);
             } else if (dragMoved && dragStart.targetId && dragStart.zone) {
                 this.tileDrop(id, dragStart.targetId, dragStart.zone);
             }
@@ -490,6 +510,7 @@ export const PanelManager = {
             dragMoved = false;
             this.dragging = true;
             panel.classList.add('dragging');
+            ws.dataset.dragging = '1';
             document.addEventListener('mousemove', onDragMove);
             document.addEventListener('mouseup', onDragEnd);
             document.addEventListener('touchmove', onDragMove, { passive: false });
@@ -534,15 +555,13 @@ export const PanelManager = {
                 }
             } else {
                 if (targetParent.direction === 'horizontal') {
-                    if (targetParent.children.length >= 3) {
-                        this.addPanelToTree(sourceId);
-                        this.applyLayout(); this.saveLayout(); return;
-                    }
-                    // Equal sizes for all children after insert
                     const insertIdx = zone === 'left' ? targetIdx : targetIdx + 1;
-                    const n = targetParent.children.length + 1;
-                    targetParent.children.splice(insertIdx, 0, makeLeaf(sourceId, 1 / n));
-                    targetParent.children.forEach(c => c.size = 1 / n);
+                    const half = targetChild.size * 0.5;
+                    targetChild.size = half;
+                    targetParent.children.splice(insertIdx, 0, makeLeaf(sourceId, half));
+                    // Normalise
+                    const total = targetParent.children.reduce((s, c) => s + c.size, 0);
+                    if (total > 0) targetParent.children.forEach(c => c.size /= total);
                 } else {
                     const newSplit = makeSplit('horizontal',
                         zone === 'left'
@@ -559,52 +578,32 @@ export const PanelManager = {
         _resizeHandlers.forEach(fn => fn());
     },
 
-    tileDropEmptySpace(sourceId, splitNode) {
-        if (splitNode.children.length >= 3) return;
-        // Snapshot the target panel IDs before removing source (tree may mutate)
-        const targetPanelIds = [];
-        const collectIds = (node) => {
-            if (node.type === 'leaf') targetPanelIds.push(node.panelId);
-            else if (node.children) node.children.forEach(collectIds);
-        };
-        splitNode.children.forEach(collectIds);
-
+    tileDropToWorkspace(sourceId) {
         this.removeFromTree(sourceId);
-
-        // Re-find the target split by locating one of its panels
-        let actualSplit = null;
-        if (targetPanelIds.length > 0) {
-            const found = findDirectParent(this.tileTree, targetPanelIds[0]);
-            if (found && found.parent.direction === 'horizontal') {
-                actualSplit = found.parent;
-            } else if (found) {
-                // Panel is now a direct child of vertical root — wrap in h-split
-                const idx = found.index;
-                const leaf = found.parent.children[idx];
-                const hSplit = makeSplit('horizontal', [makeLeaf(leaf.panelId, leaf.size || 1)], leaf.size);
-                found.parent.children[idx] = hSplit;
-                actualSplit = hSplit;
-            }
-        }
-        if (!actualSplit) { this.addPanelToTree(sourceId); this.applyLayout(); this.saveLayout(); return; }
-        if (actualSplit.children.length >= 3) { this.addPanelToTree(sourceId); this.applyLayout(); this.saveLayout(); return; }
-
-        // Calculate remaining space
-        const usedSize = actualSplit.children.reduce((s, c) => s + c.size, 0);
-        const available = Math.max(1 - usedSize, 0);
-        if (available > 0.01) {
-            actualSplit.children.push(makeLeaf(sourceId, snapSize(available)));
+        const leaf = makeLeaf(sourceId, 1);
+        if (!this.tileTree) {
+            this.tileTree = makeSplit('vertical', [leaf], 1);
+        } else if (this.tileTree.type === 'leaf') {
+            this.tileTree = makeSplit('vertical', [makeLeaf(this.tileTree.panelId, 0.5), leaf], 1);
+            leaf.size = 0.5;
+        } else if (this.tileTree.direction === 'vertical') {
+            // Append as a new row at the bottom
+            const n = this.tileTree.children.length + 1;
+            this.tileTree.children.forEach(c => c.size = (c.size * (n - 1)) / n);
+            leaf.size = 1 / n;
+            this.tileTree.children.push(leaf);
         } else {
-            const n = actualSplit.children.length + 1;
-            actualSplit.children.forEach(c => c.size = 1 / n);
-            actualSplit.children.push(makeLeaf(sourceId, 1 / n));
+            // Root is horizontal — wrap both in a new vertical root
+            this.tileTree.size = 0.5;
+            this.tileTree = makeSplit('vertical', [this.tileTree, leaf], 1);
+            leaf.size = 0.5;
         }
         this.applyLayout();
         this.saveLayout();
         _resizeHandlers.forEach(fn => fn());
     },
 
-    // ── Dividers (column resize only) ─────────────────────────
+    // ── Dividers (column + row resize) ────────────────────────
 
     renderDividers() {
         this._dividers.forEach(d => d.remove());
@@ -617,12 +616,11 @@ export const PanelManager = {
     _renderDividersForNode(node, ws) {
         if (!node || node.type === 'leaf') return;
         const { direction, children } = node;
+        const wsRect = ws.getBoundingClientRect();
+        const dividerSize = 8;
 
-        // Only create dividers for horizontal splits (column resize)
+        // Only column dividers — vertical splits grow naturally with page height
         if (direction === 'horizontal' && node._el) {
-            const wsRect = ws.getBoundingClientRect();
-            const dividerW = 8;
-
             for (let i = 0; i < children.length - 1; i++) {
                 const childEl = children[i]._el;
                 if (!childEl) continue;
@@ -630,14 +628,14 @@ export const PanelManager = {
 
                 const div = document.createElement('div');
                 div.className = 'tile-divider tile-divider-v';
-                div.style.left = (childRect.right - wsRect.left - dividerW / 2) + 'px';
+                div.style.left = (childRect.right - wsRect.left - dividerSize / 2) + 'px';
                 div.style.top = (childRect.top - wsRect.top + ws.scrollTop) + 'px';
-                div.style.width = dividerW + 'px';
+                div.style.width = dividerSize + 'px';
                 div.style.height = childRect.height + 'px';
+
                 ws.appendChild(div);
                 this._dividers.push(div);
-
-                this._setupDividerDrag(div, node, i);
+                this._setupDividerDrag(div, node, i, 'x');
             }
         }
 
@@ -653,33 +651,21 @@ export const PanelManager = {
             e.preventDefault();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
 
-            const rowRect = splitNode._el.getBoundingClientRect();
-            const pos = clientX - rowRect.left;
-            const total = rowRect.width;
+            const containerRect = splitNode._el.getBoundingClientRect();
+            const a = splitNode.children[childIdx];
+            const b = splitNode.children[childIdx + 1];
+            const combined = a.size + b.size;
+            const total = containerRect.width;
+            const minFrac = MIN_PANEL_PX / total;
 
             let prevSizeSum = 0;
             for (let i = 0; i < childIdx; i++) prevSizeSum += splitNode.children[i].size;
 
-            const a = splitNode.children[childIdx];
-            const b = splitNode.children[childIdx + 1];
-            const combined = a.size + b.size;
-            const minFrac = MIN_PANEL_PX / total;
-
-            let newASize = (pos / total) - prevSizeSum;
-            // Snap to nearest valid size (1/3, 1/2, 2/3)
-            const validSnaps = SNAP_SIZES.filter(s => s >= 1/3 - 0.01 && s <= combined - 1/3 + 0.01);
-            if (validSnaps.length > 0) {
-                let best = validSnaps[0], bestDist = Math.abs(newASize - best);
-                for (const s of validSnaps) {
-                    const d = Math.abs(newASize - s);
-                    if (d < bestDist) { best = s; bestDist = d; }
-                }
-                newASize = best;
-            }
+            const newASize = Math.max(minFrac, Math.min(combined - minFrac,
+                (clientX - containerRect.left) / total - prevSizeSum));
             a.size = newASize;
             b.size = combined - newASize;
 
-            // Update flex sizes directly
             if (a._el) {
                 const pctA = (a.size * 100) + '%';
                 a._el.style.flex = '0 0 ' + pctA;
@@ -693,7 +679,6 @@ export const PanelManager = {
                 b._el.style.maxWidth = pctB;
             }
 
-            // Reposition divider
             if (a._el) {
                 const aRect = a._el.getBoundingClientRect();
                 const ws = document.getElementById('workspace');
@@ -829,7 +814,6 @@ export const PanelManager = {
         const combinedSize = panelNode.size + siblingNode.size;
 
         if (siblingNode.type === 'split' && siblingNode.direction === 'horizontal') {
-            if (siblingNode.children.length >= 3) return; // max 3 per row
             // Join existing horizontal split
             parent.children.splice(panelIdx, 1);
             const adjSibIdx = panelIdx < siblingIdx ? siblingIdx - 1 : siblingIdx;
